@@ -95,7 +95,7 @@ pub fn create_jwt(user: User) -> Result<String, JwtError> {
         .duration_since(UNIX_EPOCH)
         .map_err(JwtError::ExpirationError)?
         .as_secs()
-        + 3600 * 12;
+        + 3600 * 1;
 
     let claims = Claims {
         sub: user.id,
