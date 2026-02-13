@@ -6,10 +6,7 @@ use argon2::Config;
 use futures::future::{Ready, ready};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use rand::{RngCore, rng};
-use std::{
-    env,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 pub fn hash_password(password: &str) -> Result<String, argon2::Error> {
@@ -88,9 +85,7 @@ pub struct Claims {
     pub exp: usize,
 }
 
-pub fn create_jwt(user: User) -> Result<String, JwtError> {
-    let secret = env::var("JWT_SECRET").map_err(|_| JwtError::SecretNotSet)?;
-
+pub fn create_jwt(user: User, secret: &str) -> Result<String, JwtError> {
     let expiration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(JwtError::ExpirationError)?
@@ -116,22 +111,19 @@ pub fn read_jwt(req: &HttpRequest) -> Result<Claims, JwtError> {
         .value()
         .to_string();
 
-    let secret = env::var("JWT_SECRET").map_err(|_| JwtError::SecretNotSet)?;
+    let data = req
+        .app_data::<actix_web::web::Data<crate::AppData>>()
+        .ok_or(JwtError::SecretNotSet)?;
+    let secret = &data.jwt_secret;
 
     let decoding_key = DecodingKey::from_secret(secret.as_bytes());
-    let validation = Validation::default();
+    let validation = Validation::new(jsonwebtoken::Algorithm::HS256);
 
-    let token_data = decode::<Claims>(&token, &decoding_key, &validation)
-        .map_err(|_| JwtError::JwtDecodingError)?;
-
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|_| JwtError::JwtDecodingError)?
-        .as_secs() as usize;
-
-    if token_data.claims.exp < now {
-        return Err(JwtError::JwtExpired);
-    }
+    let token_data =
+        decode::<Claims>(&token, &decoding_key, &validation).map_err(|e| match e.kind() {
+            jsonwebtoken::errors::ErrorKind::ExpiredSignature => JwtError::JwtExpired,
+            _ => JwtError::JwtDecodingError,
+        })?;
 
     Ok(token_data.claims)
 }

@@ -34,6 +34,7 @@ pub struct AppData {
     pub db: SqlitePool,
     pub env: Env,
     pub domain: String,
+    pub jwt_secret: String,
 }
 
 impl AppData {
@@ -179,6 +180,7 @@ impl FrameworkApp {
         info!("Starting application...");
 
         let domain = env::var("DOMAIN").expect("DOMAIN not set in .env file");
+        let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET not set in .env file");
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL not set in .env file");
         let db_file = database_url.trim_start_matches("sqlite:");
 
@@ -262,6 +264,7 @@ impl FrameworkApp {
                     db: db_pool.clone(),
                     env: env.clone(),
                     domain: domain.clone(),
+                    jwt_secret: jwt_secret.clone(),
                 }))
                 .wrap(
                     ErrorHandlers::new()

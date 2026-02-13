@@ -60,15 +60,15 @@ pub async fn post(data: Data<AppData>, form: Form<FormData>) -> AppResult {
         }
     };
 
-    let jwt =
-        create_jwt(user).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
+    let jwt = create_jwt(user, &data.jwt_secret)
+        .map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
 
     let cookie = Cookie::build("token", jwt)
         .domain(&data.domain)
         .path("/")
         .same_site(actix_web::cookie::SameSite::Strict)
         .secure(data.env != Env::Dev)
-        .max_age(Duration::hours(12))
+        .max_age(Duration::hours(1))
         .http_only(true)
         .finish();
 
