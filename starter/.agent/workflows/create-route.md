@@ -13,7 +13,7 @@ Create a new file in `src/services/` (e.g., `src/services/my_service.rs`).
 - Return `AppResult` (which is `Result<HttpResponse, AppError>`).
 - Use `data.render_tpl("template_name", &context).await` to return the response.
 
-**Simple GET Request (No Context):**
+**Simple GET Request (Allows any logged-in user):**
 ```rust
 use crate::{get, AppData, AuthUser, Data, Responder};
 
@@ -23,11 +23,11 @@ pub async fn get(data: Data<AppData>, _user: AuthUser) -> impl Responder {
 }
 ```
 
-**Request with Database and Context:**
+**Admin-only Request with Database and Context:**
 ```rust
 use crate::{
     actix_web::{get, web},
-    AppData, AppResult, AuthUser, Serialize,
+    AdminUser, AppData, AppResult, Serialize,
 };
 
 #[derive(Serialize)]
@@ -37,11 +37,9 @@ struct Context {
 }
 
 #[get("/my-route")]
-pub async fn get(data: web::Data<AppData>, user: AuthUser) -> AppResult {
-    // Check permissions if needed
-    if user.claims.role != "admin" {
-        return Err(crate::AppError::NoAuth);
-    }
+pub async fn get(data: web::Data<AppData>, _user: AdminUser) -> AppResult {
+    // AdminUser extractor automatically ensures the user is an admin.
+    // Regular users are automatically redirected or shown a no-access page.
 
     let items = sqlx::query_scalar!("SELECT name FROM my_table")
         .fetch_all(&data.db)
@@ -99,8 +97,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 }
 ```
 
-### 4. Error Handling
+### 4. Authorization & Error Handling
+- Use `AuthUser` to require login, or `AdminUser` for admin-only routes (automatic authorization).
 - Use `AppResult` for handlers that can fail.
 - Use `?` to propagate database or other errors.
-- Use `Err(AppError::NoAuth)` for permission issues.
-- These are automatically rendered using `error.astro` or `noauth.astro`.
+- Use `Err(AppError::NoAuth)` for manual permission checks.
+- Authentication issues automatically redirect to `/login`. Authorization issues show the `noauth.astro` page.
