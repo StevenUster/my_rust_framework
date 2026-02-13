@@ -1,20 +1,20 @@
 use crate::{
-    actix_web::{delete, get, post, web, HttpResponse},
     AppData, AppError, AppResult, AuthUser, Deserialize, Serialize, Table, TableHeader, User,
+    actix_web::{HttpResponse, delete, get, post, web},
 };
 
 #[derive(Serialize)]
 struct Row {
     pub id: i64,
     pub email: String,
-    pub role: String,
+    pub role: crate::UserRole,
     pub created_at: String,
     pub link: String,
 }
 
 #[get("/users")]
 pub async fn get(data: web::Data<AppData>, user: AuthUser) -> AppResult {
-    if user.claims.role != "admin" {
+    if user.claims.role != crate::UserRole::Admin {
         return Err(AppError::NoAuth);
     }
 
@@ -70,7 +70,7 @@ pub async fn get(data: web::Data<AppData>, user: AuthUser) -> AppResult {
 
 #[get("/users/{id}")]
 pub async fn get_user(data: web::Data<AppData>, user: AuthUser, path: web::Path<i64>) -> AppResult {
-    if user.claims.role != "admin" {
+    if user.claims.role != crate::UserRole::Admin {
         return Err(AppError::NoAuth);
     }
 
@@ -84,7 +84,7 @@ pub async fn get_user(data: web::Data<AppData>, user: AuthUser, path: web::Path<
 
 #[derive(Deserialize)]
 pub struct UserUpdateForm {
-    pub role: String,
+    pub role: crate::UserRole,
 }
 
 #[post("/users/{id}")]
@@ -94,7 +94,7 @@ pub async fn post_user(
     path: web::Path<i64>,
     form: web::Form<UserUpdateForm>,
 ) -> AppResult {
-    if user.claims.role != "admin" {
+    if user.claims.role != crate::UserRole::Admin {
         return Err(AppError::NoAuth);
     }
 
@@ -115,7 +115,7 @@ pub async fn delete_user(
     user: AuthUser,
     path: web::Path<i64>,
 ) -> AppResult {
-    if user.claims.role != "admin" {
+    if user.claims.role != crate::UserRole::Admin {
         return Err(AppError::NoAuth);
     }
 

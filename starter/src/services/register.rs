@@ -70,9 +70,10 @@ pub async fn post(data: web::Data<AppData>, form: web::Form<FormData>) -> AppRes
     }
 
     let _user_id = sqlx::query!(
-        "INSERT INTO users (email, password, role) VALUES (?, ?, 'user')",
+        "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
         email,
-        hashed_password
+        hashed_password,
+        crate::UserRole::User
     )
     .execute(&data.db)
     .await

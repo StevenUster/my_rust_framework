@@ -84,7 +84,7 @@ impl From<AuthError> for Error {
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Claims {
     pub sub: i64,
-    pub role: String,
+    pub role: crate::structs::UserRole,
     pub exp: usize,
 }
 
@@ -148,7 +148,7 @@ impl FromRequest for AuthUser {
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         let result = read_jwt(req)
             .and_then(|claims| {
-                if claims.role == "admin" {
+                if claims.role == crate::structs::UserRole::Admin {
                     return Ok(AuthUser { claims });
                 }
                 Err(JwtError::Unauthorized)

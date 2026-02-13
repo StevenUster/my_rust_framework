@@ -6,7 +6,7 @@ pub use crate::{
     AppData, Env, FrameworkApp,
     auth::{AuthUser, create_jwt, hash_password, verify_password},
     error::{AppError, AppResult, ResultExt},
-    structs::{Table, TableAction, TableHeader, User},
+    structs::{Table, TableAction, TableHeader, User, UserRole},
 };
 
 // Full crate re-exports (so users don't need them in Cargo.toml)

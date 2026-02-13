@@ -40,7 +40,12 @@ pub async fn post(data: Data<AppData>, form: Form<FormData>) -> AppResult {
 
     let password_ok = verify_password(&form.password, hash);
 
-    if !user_exists || !password_ok || user.as_ref().map_or(true, |u| &u.role != "admin") {
+    if !user_exists
+        || !password_ok
+        || user
+            .as_ref()
+            .map_or(true, |u| u.role != crate::UserRole::Admin)
+    {
         return Ok(data
             .render_tpl("login", &json!({"error": "Falsche Daten"}))
             .await);
