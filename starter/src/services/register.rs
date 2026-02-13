@@ -27,6 +27,15 @@ pub async fn post(data: web::Data<AppData>, form: web::Form<FormData>) -> AppRes
     //     }
     // }
 
+    if form.password.len() < 8 {
+        return Ok(data
+            .render_tpl(
+                "register",
+                &json!({"error": "Passwort muss mindestens 8 Zeichen lang sein"}),
+            )
+            .await);
+    }
+
     if form.password != form.repeat_password {
         return Ok(data
             .render_tpl(
@@ -36,7 +45,17 @@ pub async fn post(data: web::Data<AppData>, form: web::Form<FormData>) -> AppRes
             .await);
     }
 
-    let user_exists = sqlx::query!("SELECT id FROM users WHERE email = ?", form.email)
+    let email = form.email.trim().to_lowercase();
+    if !email.contains('@') || email.is_empty() {
+        return Ok(data
+            .render_tpl("register", &json!({"error": "Ungültige E-Mail-Adresse"}))
+            .await);
+    }
+
+    let hashed_password =
+        hash_password(&form.password).map_err(|e| AppError::Internal(e.to_string()))?;
+
+    let user_exists = sqlx::query!("SELECT id FROM users WHERE email = ?", email)
         .fetch_optional(&data.db)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
@@ -50,12 +69,9 @@ pub async fn post(data: web::Data<AppData>, form: web::Form<FormData>) -> AppRes
             .await);
     }
 
-    let hashed_password =
-        hash_password(&form.password).map_err(|e| AppError::Internal(e.to_string()))?;
-
     let _user_id = sqlx::query!(
         "INSERT INTO users (email, password, role) VALUES (?, ?, 'user')",
-        form.email,
+        email,
         hashed_password
     )
     .execute(&data.db)
