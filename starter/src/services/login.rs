@@ -1,7 +1,11 @@
 use crate::{
     AppData, AppError, AppResult, Data, Deserialize, Env, Form, HttpResponse, LOCATION, Responder,
-    User, cookie::Cookie, cookie::time::Duration, create_jwt, get, json, verify_password,
+    User, cookie::Cookie, cookie::time::Duration, create_jwt, get, hash_password, json,
+    verify_password,
 };
+use std::sync::OnceLock;
+
+static DUMMY_HASH: OnceLock<String> = OnceLock::new();
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -19,27 +23,37 @@ pub async fn post(data: Data<AppData>, form: Form<FormData>) -> AppResult {
         .fetch_one(&data.db)
         .await;
 
-    let user = match user_res {
-        Ok(u) => u,
-        Err(sqlx::Error::RowNotFound) => {
+    let (user, user_exists) = match user_res {
+        Ok(u) => (Some(u), true),
+        Err(sqlx::Error::RowNotFound) => (None, false),
+        Err(e) => return Err(e.into()),
+    };
+
+    // Use user password or a dummy hash to keep timing consistent (resist timing attacks)
+    let dummy_hash = DUMMY_HASH.get_or_init(|| {
+        hash_password("dummy_password_for_timing_safety").unwrap_or_else(|_| {
+            // Failsafe in case hashing fails (extremely unlikely)
+            "$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$i6PrS9n+AdfNf/U7/lH1XQ".to_string()
+        })
+    });
+    let hash = user.as_ref().map_or(dummy_hash.as_str(), |u| &u.password);
+
+    let password_ok = verify_password(&form.password, hash);
+
+    if !user_exists || !password_ok || user.as_ref().map_or(true, |u| &u.role != "admin") {
+        return Ok(data
+            .render_tpl("login", &json!({"error": "Falsche Daten"}))
+            .await);
+    }
+
+    let user = match user {
+        Some(u) => u,
+        None => {
             return Ok(data
                 .render_tpl("login", &json!({"error": "Falsche Daten"}))
                 .await);
         }
-        Err(e) => return Err(e.into()),
     };
-
-    if !verify_password(&form.password, &user.password) {
-        return Ok(data
-            .render_tpl("login", &json!({"error": "Falsche Daten"}))
-            .await);
-    }
-
-    if &user.role != "admin" {
-        return Ok(data
-            .render_tpl("login", &json!({"error": "Falsche Daten"}))
-            .await);
-    }
 
     let jwt =
         create_jwt(user).map_err(|e| AppError::Internal(format!("JWT creation error: {}", e)))?;
