@@ -2,11 +2,10 @@ use actix_governor::governor::middleware::NoOpMiddleware;
 use actix_governor::{Governor, GovernorConfigBuilder, PeerIpKeyExtractor};
 
 /// Rate limiter for authentication endpoints (login, register)
-/// More restrictive: 5 requests per minute per IP
 pub fn auth_rate_limiter() -> Governor<PeerIpKeyExtractor, NoOpMiddleware> {
     let config = GovernorConfigBuilder::default()
         .seconds_per_request(120)
-        .burst_size(5)
+        .burst_size(1)
         .finish()
         .expect("Failed to create auth rate limiter config");
 
@@ -14,7 +13,6 @@ pub fn auth_rate_limiter() -> Governor<PeerIpKeyExtractor, NoOpMiddleware> {
 }
 
 /// Rate limiter for general endpoints
-/// Less restrictive: 100 requests per minute per IP
 pub fn _general_rate_limiter() -> Governor<PeerIpKeyExtractor, NoOpMiddleware> {
     let config = GovernorConfigBuilder::default()
         .seconds_per_request(1)
