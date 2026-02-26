@@ -5,7 +5,7 @@ use actix_web::{
     body::MessageBody,
     dev::ServiceResponse,
     http::StatusCode,
-    middleware::{DefaultHeaders, ErrorHandlerResponse, ErrorHandlers},
+    middleware::{DefaultHeaders, ErrorHandlerResponse, ErrorHandlers, NormalizePath},
     web,
 };
 use dotenv::dotenv;
@@ -298,6 +298,7 @@ impl FrameworkApp {
                     domain: domain.clone(),
                     jwt_secret: jwt_secret.clone(),
                 }))
+                .wrap(NormalizePath::trim())
                 .wrap(
                     ErrorHandlers::new()
                         .handler(StatusCode::INTERNAL_SERVER_ERROR, render_error_page)
