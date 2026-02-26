@@ -32,7 +32,7 @@ pub async fn post(data: Data<AppData>, form: Form<FormData>) -> AppResult {
     // Use user password or a dummy hash to keep timing consistent (resist timing attacks)
     let dummy_hash = DUMMY_HASH.get_or_init(|| {
         hash_password("dummy_password_for_timing_safety").unwrap_or_else(|_| {
-            // Failsafe in case hashing fails (extremely unlikely)
+            // Failsafe in case hashing fails
             "$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$i6PrS9n+AdfNf/U7/lH1XQ".to_string()
         })
     });
@@ -44,7 +44,7 @@ pub async fn post(data: Data<AppData>, form: Form<FormData>) -> AppResult {
         || !password_ok
         || user
             .as_ref()
-            .map_or(true, |u| u.role != crate::UserRole::Admin)
+            .map_or(true, |u| u.role == crate::UserRole::None)
     {
         return Ok(data
             .render_tpl("login", &json!({"error": "Falsche Daten"}))
