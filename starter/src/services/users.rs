@@ -61,7 +61,17 @@ pub async fn get(data: web::Data<AppData>, _user: AdminUser) -> AppResult {
         actions: vec![],
     };
 
-    Ok(data.render_tpl("users", &table).await)
+    Ok(data
+        .render_tpl(
+            "users",
+            &crate::json!({
+                "headers": table.headers,
+                "rows": table.rows,
+                "actions": table.actions,
+                "role": "admin"
+            }),
+        )
+        .await)
 }
 
 #[get("/users/{id}")]
@@ -75,7 +85,16 @@ pub async fn get_user(
         .fetch_one(&data.db)
         .await?;
 
-    Ok(data.render_tpl("user", &user_data).await)
+    Ok(data
+        .render_tpl(
+            "user",
+            &crate::json!({
+                "id": user_data.id,
+                "email": user_data.email,
+                "role": "admin"
+            }),
+        )
+        .await)
 }
 
 #[derive(Deserialize)]
