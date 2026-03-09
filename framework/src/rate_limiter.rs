@@ -13,7 +13,7 @@ pub fn auth_rate_limiter() -> Governor<PeerIpKeyExtractor, NoOpMiddleware> {
 }
 
 /// Rate limiter for general endpoints
-pub fn _general_rate_limiter() -> Governor<PeerIpKeyExtractor, NoOpMiddleware> {
+pub fn general_rate_limiter() -> Governor<PeerIpKeyExtractor, NoOpMiddleware> {
     let config = GovernorConfigBuilder::default()
         .seconds_per_request(1)
         .burst_size(100)
